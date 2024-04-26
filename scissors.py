@@ -10,17 +10,33 @@ from skimage import filters
 from math import fabs, sqrt
 
 # Read and Pre-process image
-img_name = "Lenna.png"
+img_name = "chucky.jpg"
 image = mpimg.imread(img_name)
+rgbImage = mpimg.imread(img_name)
 image = color.rgb2gray(image)
 edges = filters.scharr(image)
+
+pixels = [[0 for _ in range(len(image[0]))] for _ in range(len(image))]
+# calculate laplacian filter and gradient magnitude
+maxGradient = 0
+for row in range(1, len(image) - 1):
+    for col in range(1, len(image[row]) - 1):
+        pixels[row][col] = ((1 * image[row-1][col-1]) + (4 * image[row-1][col]) + (1 * image[row-1][col+1]) + (4 * image[row][col-1]) + (-20 * image[row][col]) + (4 * image[row][col+1]) + (1 * image[row+1][col-1]) + (4 * image[row+1][col]) + (1 * image[row+1][col+1]))/6     #sqrt(Ix**2 + Iy**2)
+        maxGradient = max(maxGradient, pixels[row][col])
+
+for row in range(1, len(image)):
+    for col in range(1, len(image[row])):
+        pixels[row][col] = 1 - (pixels[row][col]/maxGradient)
+        if pixels[row][col] < 1.2:
+            pixels[row][col] = 0
+
 
 # Convert image to graph
 G = {}
 maxD = 0
-for row in range(0, len(image)):
-    for col in range(0, len(image[row])):
-        if row == 0 or col == 0 or row >= len(image) - 1 or col >= len(image[row]) - 1:
+for row in range(0, len(pixels)):
+    for col in range(0, len(pixels[row])):
+        if row == 0 or col == 0 or row >= len(pixels) - 1 or col >= len(pixels[row]) - 1:
             G[(row,col)] = {}
             continue
         
@@ -43,34 +59,34 @@ for row in range(0, len(image)):
             if row != n[0] and col != n[1]:
                 # top right
                 if row > n[0] and col < n[1]:
-                    dist[n] = fabs(image[row][col + 1] - image[row - 1][col])/sqrt(2)
+                    dist[n] = fabs(pixels[row][col + 1] - pixels[row - 1][col])/sqrt(2)
                 # top left
                 elif row > n[0] and col > n[1]:
-                    dist[n] = fabs(image[row][col - 1] - image[row - 1][col])/sqrt(2)
+                    dist[n] = fabs(pixels[row][col - 1] - pixels[row - 1][col])/sqrt(2)
                 # bottom right
                 elif row < n[0] and col < n[1]:
-                    dist[n] = fabs(image[row][col + 1] - image[row + 1][col])/sqrt(2)
+                    dist[n] = fabs(pixels[row][col + 1] - pixels[row + 1][col])/sqrt(2)
                 # bottom left
                 else:
-                    dist[n] = fabs(image[row][col - 1] - image[row + 1][col])/sqrt(2)
+                    dist[n] = fabs(pixels[row][col - 1] - pixels[row + 1][col])/sqrt(2)
                     
 
             # horizontal
             elif col != n[1]:
                 # ->
                 if col < n[1]:
-                    dist[n] = fabs((image[row - 1][col] + image[row - 1][col + 1])/2 - (image[row + 1][col] + image[row + 1][col + 1])/2)/2
+                    dist[n] = fabs((pixels[row - 1][col] + pixels[row - 1][col + 1])/2 - (pixels[row + 1][col] + pixels[row + 1][col + 1])/2)/2
                 # <-
                 else:
-                    dist[n] = fabs((image[row - 1][col] + image[row - 1][col - 1])/2 - (image[row + 1][col] + image[row + 1][col - 1])/2)/2
+                    dist[n] = fabs((pixels[row - 1][col] + pixels[row - 1][col - 1])/2 - (pixels[row + 1][col] + pixels[row + 1][col - 1])/2)/2
             # vertical
             elif row != n[0]:
                 # up
                 if row > n[0]:
-                    dist[n] = fabs((image[row][col - 1] + image[row - 1][col - 1])/2 - (image[row][col + 1] + image[row - 1][col + 1])/2)/2
+                    dist[n] = fabs((pixels[row][col - 1] + pixels[row - 1][col - 1])/2 - (pixels[row][col + 1] + pixels[row - 1][col + 1])/2)/2
                 # down
                 else:
-                    dist[n] = fabs((image[row][col - 1] + image[row + 1][col - 1])/2 - (image[row][col + 1] + image[row + 1][col + 1])/2)/2
+                    dist[n] = fabs((pixels[row][col - 1] + pixels[row + 1][col - 1])/2 - (pixels[row][col + 1] + pixels[row + 1][col + 1])/2)/2
             maxD = max(maxD, dist[n])
             
         G[(row,col)] = dist
@@ -120,6 +136,7 @@ def mouse_moved(event):
     if current_path is not None:
         current_path.pop(0).remove()
     current_path = plt.plot(np.array(path)[:,1], np.array(path)[:,0], c=current_color)
+    plt.draw()
 
 def key_pressed(event):
     if event.key == 'escape':
@@ -140,7 +157,7 @@ if INTERACTIVE:
 plt.connect('key_press_event', key_pressed)
 
 plt.gray()
-plt.imshow(image)
+plt.imshow(rgbImage)
 plt.autoscale(False)
 plt.title('Live-Wire Tool')
 plt.show()
