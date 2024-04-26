@@ -10,7 +10,7 @@ from skimage import filters
 from math import fabs, sqrt
 
 # Read and Pre-process image
-img_name = "chucky.jpg"
+img_name = "images/Lenna.png"
 image = mpimg.imread(img_name)
 rgbImage = mpimg.imread(img_name)
 image = color.rgb2gray(image)
