@@ -47,70 +47,82 @@ for row in range(1, len(image)):
 
 # Convert image to graph
 G = {}
-maxD = 0
-for row in range(0, len(pixels)):
-    for col in range(0, len(pixels[row])):
-        if row == 0 or col == 0 or row >= len(pixels) - 1 or col >= len(pixels[row]) - 1:
-            G[(row,col)] = {}
-            continue
-        
-        neighbors = []
-      
-        neighbors.append( (row-1, col) )
-        neighbors.append( (row+1, col) )
-        neighbors.append( (row, col-1) )
-        neighbors.append( (row, col+1) )
-        neighbors.append( (row-1, col-1) )
-        neighbors.append( (row-1, col+1) )
-        neighbors.append( (row+1, col-1) )
-        neighbors.append( (row+1, col+1) )
-        
-        dist = {}
-        for n in neighbors:
-            # cost function (can be replaced)
+maxD = [0]
 
-            # diaganol
-            if row != n[0] and col != n[1]:
-                # top right
-                if row > n[0] and col < n[1]:
-                    dist[n] = fabs(pixels[row][col + 1] - pixels[row - 1][col])/sqrt(2)
-                # top left
-                elif row > n[0] and col > n[1]:
-                    dist[n] = fabs(pixels[row][col - 1] - pixels[row - 1][col])/sqrt(2)
-                # bottom right
-                elif row < n[0] and col < n[1]:
-                    dist[n] = fabs(pixels[row][col + 1] - pixels[row + 1][col])/sqrt(2)
-                # bottom left
-                else:
-                    dist[n] = fabs(pixels[row][col - 1] - pixels[row + 1][col])/sqrt(2)
-                    
-
-            # horizontal
-            elif col != n[1]:
-                # ->
-                if col < n[1]:
-                    dist[n] = fabs((pixels[row - 1][col] + pixels[row - 1][col + 1])/2 - (pixels[row + 1][col] + pixels[row + 1][col + 1])/2)/2
-                # <-
-                else:
-                    dist[n] = fabs((pixels[row - 1][col] + pixels[row - 1][col - 1])/2 - (pixels[row + 1][col] + pixels[row + 1][col - 1])/2)/2
-            # vertical
-            elif row != n[0]:
-                # up
-                if row > n[0]:
-                    dist[n] = fabs((pixels[row][col - 1] + pixels[row - 1][col - 1])/2 - (pixels[row][col + 1] + pixels[row - 1][col + 1])/2)/2
-                # down
-                else:
-                    dist[n] = fabs((pixels[row][col - 1] + pixels[row + 1][col - 1])/2 - (pixels[row][col + 1] + pixels[row + 1][col + 1])/2)/2
-            maxD = max(maxD, dist[n])
+def intensity_derivative(pixels, maxD, G, start, end):
+    for row in range(0, len(pixels)):
+        for col in range(0, len(pixels[row])):
+            if row == 0 or col == 0 or row >= len(pixels) - 1 or col >= len(pixels[row]) - 1:
+                G[(row,col)] = {}
+                continue
             
-        G[(row,col)] = dist
+            neighbors = []
+        
+            neighbors.append( (row-1, col) )
+            neighbors.append( (row+1, col) )
+            neighbors.append( (row, col-1) )
+            neighbors.append( (row, col+1) )
+            neighbors.append( (row-1, col-1) )
+            neighbors.append( (row-1, col+1) )
+            neighbors.append( (row+1, col-1) )
+            neighbors.append( (row+1, col+1) )
+            
+            dist = {}
+            for n in neighbors:
+                # cost function (can be replaced)
+
+                # diaganol
+                if row != n[0] and col != n[1]:
+                    # top right
+                    if row > n[0] and col < n[1]:
+                        dist[n] = fabs(pixels[row][col + 1] - pixels[row - 1][col])/sqrt(2)
+                    # top left
+                    elif row > n[0] and col > n[1]:
+                        dist[n] = fabs(pixels[row][col - 1] - pixels[row - 1][col])/sqrt(2)
+                    # bottom right
+                    elif row < n[0] and col < n[1]:
+                        dist[n] = fabs(pixels[row][col + 1] - pixels[row + 1][col])/sqrt(2)
+                    # bottom left
+                    else:
+                        dist[n] = fabs(pixels[row][col - 1] - pixels[row + 1][col])/sqrt(2)
+                        
+
+                # horizontal
+                elif col != n[1]:
+                    # ->
+                    if col < n[1]:
+                        dist[n] = fabs((pixels[row - 1][col] + pixels[row - 1][col + 1])/2 - (pixels[row + 1][col] + pixels[row + 1][col + 1])/2)/2
+                    # <-
+                    else:
+                        dist[n] = fabs((pixels[row - 1][col] + pixels[row - 1][col - 1])/2 - (pixels[row + 1][col] + pixels[row + 1][col - 1])/2)/2
+                # vertical
+                elif row != n[0]:
+                    # up
+                    if row > n[0]:
+                        dist[n] = fabs((pixels[row][col - 1] + pixels[row - 1][col - 1])/2 - (pixels[row][col + 1] + pixels[row - 1][col + 1])/2)/2
+                    # down
+                    else:
+                        dist[n] = fabs((pixels[row][col - 1] + pixels[row + 1][col - 1])/2 - (pixels[row][col + 1] + pixels[row + 1][col + 1])/2)/2
+                maxD[0] = max(maxD[0], dist[n])
+                
+            G[(row,col)] = dist
+
+t1 = threading.Thread(target=intensity_derivative, args=(pixels, maxD, G, 1, int(len(image)/3)))
+t2 = threading.Thread(target=intensity_derivative, args=(pixels, maxD, G, int(len(image)/3), int(2 * len(image)/3)))
+t3 = threading.Thread(target=intensity_derivative, args=(pixels, maxD, G, int(2 * len(image)/3), len(image) - 1))
+t1.start()
+t2.start()
+t3.start()
+t1.join()
+t2.join()
+t3.join()
 
 for key in G:
     for n in G[key]:
         if key[0] != n[0] and key[1] != n[1]:
-            G[key][n] = (maxD - G[key][n]) * sqrt(2)
+            G[key][n] = (maxD[0] - G[key][n]) * sqrt(2)
         else:
-            G[key][n] = (maxD - G[key][n])
+            G[key][n] = (maxD[0] - G[key][n])
 
 
 # Apply Dijkstra's Algorithm
