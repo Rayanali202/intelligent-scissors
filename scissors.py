@@ -8,6 +8,7 @@ from skimage import io
 from skimage import filters
 
 from math import fabs, sqrt
+import threading
 
 # Read and Pre-process image
 img_name = "images/Lenna.png"
@@ -18,15 +19,28 @@ edges = filters.scharr(image)
 
 pixels = [[0 for _ in range(len(image[0]))] for _ in range(len(image))]
 # calculate laplacian filter and gradient magnitude
-maxGradient = 0
-for row in range(1, len(image) - 1):
-    for col in range(1, len(image[row]) - 1):
-        pixels[row][col] = ((1 * image[row-1][col-1]) + (4 * image[row-1][col]) + (1 * image[row-1][col+1]) + (4 * image[row][col-1]) + (-20 * image[row][col]) + (4 * image[row][col+1]) + (1 * image[row+1][col-1]) + (4 * image[row+1][col]) + (1 * image[row+1][col+1]))/6     #sqrt(Ix**2 + Iy**2)
-        maxGradient = max(maxGradient, pixels[row][col])
+maxGradient = [0]
+
+def edge_detection(pixels, image, maxGradient, start, end):
+    for row in range(start, end):
+        for col in range(1, len(image[row]) - 1):
+            pixels[row][col] = ((1 * image[row-1][col-1]) + (4 * image[row-1][col]) + (1 * image[row-1][col+1]) + (4 * image[row][col-1]) + (-20 * image[row][col]) + (4 * image[row][col+1]) + (1 * image[row+1][col-1]) + (4 * image[row+1][col]) + (1 * image[row+1][col+1]))/6
+            maxGradient[0] = max(maxGradient[0], pixels[row][col])
+
+t1 = threading.Thread(target=edge_detection, args=(pixels, image, maxGradient, 1, int(len(image)/3)))
+t2 = threading.Thread(target=edge_detection, args=(pixels, image, maxGradient, int(len(image)/3), int(2 * len(image)/3)))
+t3 = threading.Thread(target=edge_detection, args=(pixels, image, maxGradient, int(2 * len(image)/3), len(image) - 1))
+t1.start()
+t2.start()
+t3.start()
+t1.join()
+t2.join()
+t3.join()
+print(maxGradient[0])
 
 for row in range(1, len(image)):
     for col in range(1, len(image[row])):
-        pixels[row][col] = 1 - (pixels[row][col]/maxGradient)
+        pixels[row][col] = 1 - (pixels[row][col]/maxGradient[0])
         if pixels[row][col] < 1.2:
             pixels[row][col] = 0
 
